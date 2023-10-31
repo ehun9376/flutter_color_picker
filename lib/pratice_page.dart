@@ -16,12 +16,42 @@ class ButtonModel {
 }
 
 class PraticePageViewmodel extends ChangeNotifier {
-  var point = 0;
+  int _thisGameLife = 3;
+  int get thisGameLife => _thisGameLife;
+  set thisGameLife(int value) {
+    _thisGameLife = value;
+    notifyListeners();
+  }
+
+  int _point = 0;
+  int get point => _point;
+  set point(int value) {
+    _point = value;
+    notifyListeners();
+  }
+
+  int _question = 1;
+  int get question => _question;
+  set question(int value) {
+    _question = value;
+    notifyListeners();
+  }
+
+  bool _playing = false;
+  bool get playing => _playing;
+  set playing(bool value) {
+    _playing = value;
+    notifyListeners();
+  }
 
   List<ButtonModel> buttonModels = [];
 
   resetAll() {
     point = 0;
+    question = 1;
+    playing = false;
+    thisGameLife = 3;
+    buttonModels = getRandomColorList();
   }
 
   List<ButtonModel> getRandomColorList() {
@@ -35,9 +65,9 @@ class PraticePageViewmodel extends ChangeNotifier {
         backgroundColor: Color.fromRGBO(baseRed, baseGreen, baseBlue, 1),
         isCorrect: false);
 
-    int offsetRed = baseRed + random.nextInt(20) - 10;
-    int offsetGreen = baseGreen + random.nextInt(20) - 10;
-    int offsetBlue = baseBlue + random.nextInt(20) - 10;
+    int offsetRed = baseRed + random.nextInt(10) - 5;
+    int offsetGreen = baseGreen + random.nextInt(10) - 5;
+    int offsetBlue = baseBlue + random.nextInt(10) - 10;
 
     ButtonModel color4 = ButtonModel(
         backgroundColor: Color.fromRGBO(offsetRed, offsetGreen, offsetBlue, 1),
@@ -73,48 +103,110 @@ class _PraticePageState extends State<PraticePage> {
     var row1 = Selector<PraticePageViewmodel, List<ButtonModel>>(
         builder: (context, value, child) {
           return Wrap(
-            children: value.map((e) => createButton(model: e)).toList(),
+            children: value
+                .map((e) => createButton(
+                    model: e,
+                    buttonAction: (bool isCorrect) {
+                      if (viewModel.playing == false) {
+                        showAppSnackBar("請先點擊開始測驗", context);
+                        return;
+                      }
+
+                      if (isCorrect) {
+                        viewModel.question += 1;
+                        viewModel.point += 1;
+                      } else {
+                        viewModel.thisGameLife -= 1;
+                        viewModel.question++;
+                      }
+
+                      if (viewModel.question >= 10 ||
+                          viewModel.thisGameLife <= 0) {
+                        showAppSnackBar(
+                            "訓練結束 得分是${viewModel.point}/10", context);
+                        viewModel.resetAll();
+                        return;
+                      } else {
+                        viewModel.buttonModels = viewModel.getRandomColorList();
+                      }
+                    }))
+                .toList(),
           );
         },
         selector: (p0, p1) => p1.buttonModels);
 
-    Wrap(
-      children: [
-        createButton(model: ButtonModel(backgroundColor: Colors.black)),
-        createButton(model: ButtonModel(backgroundColor: Colors.blue)),
-        createButton(model: ButtonModel(backgroundColor: Colors.blue)),
-        createButton(model: ButtonModel(backgroundColor: Colors.blue)),
-      ],
-    );
+    var startButton = Selector<PraticePageViewmodel, bool>(
+      builder: (context, value, child) {
+        return SimpleButton(
+          buttontitle: value ? "結束" : "開始測驗",
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          buttonAction: () {
+            if (viewModel.playing) {
+              viewModel.resetAll();
+              return;
+            }
 
-    var startButton = SimpleButton(
-      buttontitle: "Start",
-      fontSize: 20,
-      fontWeight: FontWeight.bold,
-      buttonAction: () {
-        if (appModel.life < 0) {
-          //TODO: - < 0
-          appModel.saveData(addLife: -1);
-          viewModel.resetAll();
-        } else {
-          showAppSnackBar("沒有訓練次數，請至設定頁購買", context);
-        }
+            if (appModel.life > 0) {
+              //TODO: - < 0
+              appModel.saveData(addLife: -1);
+              viewModel.resetAll();
+              viewModel.playing = !viewModel.playing;
+            } else {
+              showSingelAlert(
+                  barrierDismissible: false,
+                  context: context,
+                  message: "沒有訓練次數，請至設定頁購買",
+                  confirmAction: () {
+                    //GOTO SettingPage
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => const SettingPage(),
+                    ));
+                  });
+            }
+          },
+        );
       },
+      selector: (p0, p1) => p1.playing,
     );
 
-    var pointText = SimpleText(
-      text: "5/10",
+    var pointText = Selector<PraticePageViewmodel, int>(
+      builder: (context, value, child) {
+        return SimpleText(
+          text: "目前分數：${viewModel.point}",
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          align: TextAlign.left,
+        ).padding();
+      },
+      selector: (p0, p1) => p1.point,
     );
 
     var questionText = Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        SimpleText(
-          text: "第1題",
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          align: TextAlign.left,
-        ).padding(),
+        Selector<PraticePageViewmodel, int>(
+          builder: (context, value, child) {
+            return SimpleText(
+              text: "第$value/10題",
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              align: TextAlign.left,
+            ).padding().flexible();
+          },
+          selector: (p0, p1) => p1.question,
+        ),
+        Selector<PraticePageViewmodel, int>(
+          builder: (context, value, child) {
+            return SimpleText(
+              text: "剩餘生命$value/3",
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              align: TextAlign.right,
+            ).padding().flexible();
+          },
+          selector: (p0, p1) => p1.thisGameLife,
+        ),
       ],
     );
 
@@ -184,4 +276,58 @@ class _PraticePageState extends State<PraticePage> {
           buttonAction(model.isCorrect ?? false);
         });
   }
+}
+
+void showSingelAlert(
+    {required BuildContext context,
+    String? message,
+    String confirmButtonTitle = "確定",
+    bool barrierDismissible = true,
+    bool pop = true,
+    Function()? confirmAction}) {
+  showDialog(
+    barrierDismissible: barrierDismissible,
+    context: context,
+    builder: (context) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              minHeight: 200,
+              maxWidth: MediaQuery.of(context).size.width - 50,
+              maxHeight: MediaQuery.of(context).size.width - 50),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                SimpleText(
+                  text: message ?? "",
+                  fontSize: 18,
+                  textColor: Colors.black,
+                ).padding(),
+                SimpleButton(
+                  buttontitle: confirmButtonTitle,
+                  cornerRadius: 15,
+                  buttonMiniSize: const Size(130, 45),
+                  backgroundColor: Colors.black,
+                  titleColor: Colors.white,
+                  buttonAction: () {
+                    if (pop) {
+                      Navigator.of(context).pop();
+                    }
+                    if (confirmAction != null) {
+                      confirmAction();
+                    }
+                  },
+                ).padding()
+              ],
+            ),
+          ).singleChildScrollView(),
+        ),
+      );
+    },
+  );
 }

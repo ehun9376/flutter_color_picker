@@ -23,21 +23,21 @@ class AppModel extends ChangeNotifier {
   IAPCenter? iapCenter;
 
   Future getData() async {
-    // var url = Uri.parse(
-    //     "http://anna.college/yihuang.online/ehun9376/flutterdive.json");
-    // var response = await http.get(url);
+    var url =
+        Uri.parse("http://anna.college/flutter/flutter_color_picker.json");
+    var response = await http.get(url);
+    debugPrint(response.body.toString());
+    var json = jsonDecode(
+        utf8.decode(response.body.toString().codeUnits))["canBuyType"];
+    _dataModels = DataModel.fromListJson(json);
 
-    // var json = jsonDecode(
-    //     utf8.decode(response.body.toString().codeUnits))["canBuyType"];
-    // _dataModels = DataModel.fromListJson(json);
-
-    // iapCenter = IAPCenter(
-    //     kIds: _dataModels.map((e) => e.id).toList(),
-    //     buyComplete: (id) {
-    //       saveData(
-    //           addLife:
-    //               dataModels.firstWhere((element) => element.id == id).number);
-    //     });
+    iapCenter = IAPCenter(
+        kIds: _dataModels.map((e) => e.id).toList(),
+        buyComplete: (id) {
+          saveData(
+              addLife:
+                  dataModels.firstWhere((element) => element.id == id).number);
+        });
   }
 
   Future<void> saveData({int addLife = 0}) async {

@@ -43,9 +43,9 @@ class SettingPage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             SimpleButton(
-              buttontitle: "點我購買 ${model.title}",
+              buttontitle: "購買 ${model.title}",
               fontSize: 20,
-              buttonIcon: Icons.business_center_outlined,
+              buttonIcon: Icons.shopping_cart,
               iconSize: 30,
               segmented: Segmented.leftToRight,
               imageTextSpace: 20,
